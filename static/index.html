@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Switch Sentry | Multi-Agent Incident Response Squad</title>
+  <title>Switch Sentry | Multi-Agent Incident Response & Quality Squad</title>
   <link rel="stylesheet" href="/static/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -15,14 +15,14 @@
       <div class="logo-icon">⚡</div>
       <div class="brand-text">
         <h1>Switch Sentry</h1>
-        <span class="tagline">Multi-Agent Incident Squad powered by Switch</span>
+        <span class="tagline">Autonomous Incident Squad & Quality Governance • Powered by Switch</span>
       </div>
     </div>
 
     <div class="topbar-meta">
       <div class="bridge-status" id="bridge-status-pill">
         <span class="pulse-dot"></span>
-        <span id="bridge-mode-text">Switch Bridge: Embedded Standalone</span>
+        <span id="bridge-mode-text">Switch Bridge: Connecting...</span>
       </div>
       <button class="btn btn-primary" id="btn-open-trigger-modal">
         <span>+</span> Simulate Incident
@@ -91,6 +91,21 @@
           <span class="meta-item">Location: <code id="meta-file">-</code></span>
           <span class="meta-item">Ref: <code id="meta-commit">-</code></span>
         </div>
+
+        <!-- Ziki-Inspired Autonomous Pipeline Stepper -->
+        <div class="pipeline-stepper" id="pipeline-stepper">
+          <div class="step-node" data-stage="1">1. Triage</div>
+          <div class="step-arrow">➔</div>
+          <div class="step-node" data-stage="2">2. Plan</div>
+          <div class="step-arrow">➔</div>
+          <div class="step-node" data-stage="3">3. Patch</div>
+          <div class="step-arrow">➔</div>
+          <div class="step-node" data-stage="4">4. Independent QA</div>
+          <div class="step-arrow">➔</div>
+          <div class="step-node" data-stage="5">5. Human Gate</div>
+          <div class="step-arrow">➔</div>
+          <div class="step-node" data-stage="6">6. Mistake Logged</div>
+        </div>
       </div>
 
       <!-- Navigation Tabs -->
@@ -104,6 +119,9 @@
         <button class="tab-btn" data-tab="tab-rca">
           📄 Post-Mortem (RCA Doc)
         </button>
+        <button class="tab-btn" data-tab="tab-mistakes">
+          📚 Project Mistake Registry
+        </button>
       </div>
 
       <!-- Tab 1: Switch Room Timeline -->
@@ -112,7 +130,7 @@
           <div class="room-channel-bar">
             <span class="room-icon">#</span>
             <span class="room-name" id="room-channel-name">incident-war-room</span>
-            <span class="room-members">🤖 @incident-commander • 🤖 @code-remediator • 👤 @lead-engineer</span>
+            <span class="room-members">🤖 @incident-commander • 🛠️ @code-remediator • 🔍 @qa-verifier • 👤 @lead-engineer</span>
           </div>
           <div class="chat-timeline" id="chat-timeline">
             <!-- Messages populated dynamically -->
@@ -148,6 +166,34 @@
           </div>
         </div>
       </div>
+
+      <!-- Tab 4: Project Mistake Registry -->
+      <div class="tab-pane" id="tab-mistakes">
+        <div class="mistakes-container">
+          <div class="mistakes-header">
+            <h4>Living Project Mistake Registry</h4>
+            <span class="doc-badge">Shared Organizational Memory</span>
+          </div>
+          <p class="mistakes-desc">
+            Inspired by Ziki's Mistake Registry: all past root causes, anti-patterns, and prevention rules are cataloged here. Agents consult this registry before writing code to prevent repeating historical mistakes.
+          </p>
+          <div class="mistakes-table-wrapper">
+            <table class="mistakes-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Title</th>
+                  <th>Anti-Pattern</th>
+                  <th>Prevention Rule</th>
+                </tr>
+              </thead>
+              <tbody id="mistakes-tbody">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </main>
   </div>
 
@@ -159,7 +205,7 @@
         <button class="btn-close" id="btn-close-modal">✕</button>
       </div>
       <div class="modal-body">
-        <p class="modal-desc">Select a realistic production incident preset to evaluate Switch Sentry's autonomous multi-agent triage and code repair:</p>
+        <p class="modal-desc">Select a realistic production incident preset to evaluate Switch Sentry's multi-agent SDLC pipeline:</p>
         <div class="presets-list" id="presets-list">
           <!-- Populated from /api/presets -->
         </div>

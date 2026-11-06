@@ -1,4 +1,4 @@
-// Switch Sentry Frontend Controller
+// Switch Sentry Frontend Controller with Ziki-Inspired Multi-Stage Pipeline
 
 let currentIncidentId = null;
 let incidents = [];
@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
   fetchSwitchStatus();
   fetchPresets();
   loadIncidents();
+  loadMistakes();
 
   // Poll for live changes every 2.5s
   setInterval(() => {
@@ -27,6 +28,10 @@ function initUI() {
       btn.classList.add("active");
       const target = document.getElementById(btn.dataset.tab);
       if (target) target.classList.add("active");
+
+      if (btn.dataset.tab === "tab-mistakes") {
+        loadMistakes();
+      }
     });
   });
 
@@ -45,7 +50,11 @@ async function fetchSwitchStatus() {
     const res = await fetch("/api/switch/status");
     const data = await res.json();
     const modeEl = document.getElementById("bridge-mode-text");
-    modeEl.textContent = `Switch Bridge: ${data.switch_bridge_mode}`;
+    if (data.live_connected) {
+      modeEl.innerHTML = `Switch Core: <b>Live (Port 8000)</b> • <a href="http://localhost:8065" target="_blank" style="color:var(--accent-cyan); text-decoration:none;">Open Mattermost</a>`;
+    } else {
+      modeEl.textContent = `Switch Bridge: ${data.switch_bridge_mode}`;
+    }
   } catch (e) {
     console.error("Failed to fetch switch status", e);
   }
@@ -113,7 +122,7 @@ async function loadIncidents() {
       card.innerHTML = `
         <div class="incident-card-top">
           <span class="severity-pill ${getSeverityClass(inc.alert.severity)}">${inc.alert.severity.split(" ")[0]}</span>
-          <span class="incident-card-meta">${escapeHtml(inc.status)}</span>
+          <span class="incident-card-meta">${escapeHtml(inc.stage.split(".")[1] || inc.stage)}</span>
         </div>
         <h4>${escapeHtml(inc.alert.title)}</h4>
         <div class="incident-card-meta">${escapeHtml(inc.alert.service)}</div>
@@ -148,13 +157,16 @@ async function loadIncidentDetail(id, autoScroll = false) {
     sevEl.className = `severity-pill ${getSeverityClass(inc.alert.severity)}`;
 
     const statEl = document.getElementById("view-status");
-    statEl.textContent = inc.status;
-    statEl.className = `status-pill ${inc.status === "RESOLVED" ? "status-resolved" : ""}`;
+    statEl.textContent = inc.stage;
+    statEl.className = `status-pill ${inc.stage.includes("6") ? "status-resolved" : ""}`;
 
     document.getElementById("meta-service").textContent = inc.alert.service;
     document.getElementById("meta-file").textContent = `${inc.alert.affected_file}:${inc.alert.line_number}`;
     document.getElementById("meta-commit").textContent = inc.alert.commit_hash;
     document.getElementById("room-channel-name").textContent = inc.switch_room_id;
+
+    // Update Stepper
+    updatePipelineStepper(inc.stage);
 
     // Telemetry HUD
     if (inc.telemetry) {
@@ -175,12 +187,16 @@ async function loadIncidentDetail(id, autoScroll = false) {
     // Chat Timeline
     renderTimeline(inc.messages, autoScroll);
 
-    // Code Diff
+    // Code Diff & Test
     const diffEl = document.getElementById("diff-content");
     const testEl = document.getElementById("test-content");
     if (inc.patch) {
       diffEl.innerHTML = formatDiff(inc.patch.unified_diff);
-      testEl.textContent = inc.patch.test_code + "\n\n" + inc.patch.test_output;
+      let testOutput = inc.patch.test_code + "\n\n" + inc.patch.test_output;
+      if (inc.verdict) {
+        testOutput += "\n\n" + inc.verdict.verdict_summary;
+      }
+      testEl.textContent = testOutput;
     } else {
       diffEl.textContent = "// No patch generated yet.";
       testEl.textContent = "// No tests executed yet.";
@@ -196,6 +212,26 @@ async function loadIncidentDetail(id, autoScroll = false) {
   } catch (e) {
     console.error("Error loading incident detail", e);
   }
+}
+
+function updatePipelineStepper(stageStr) {
+  let currentStageNum = 1;
+  if (stageStr.includes("1")) currentStageNum = 1;
+  else if (stageStr.includes("2")) currentStageNum = 2;
+  else if (stageStr.includes("3")) currentStageNum = 3;
+  else if (stageStr.includes("4")) currentStageNum = 4;
+  else if (stageStr.includes("5")) currentStageNum = 5;
+  else if (stageStr.includes("6")) currentStageNum = 6;
+
+  document.querySelectorAll(".step-node").forEach((node) => {
+    const s = parseInt(node.dataset.stage, 10);
+    node.classList.remove("active", "completed");
+    if (s < currentStageNum || currentStageNum === 6) {
+      node.classList.add("completed");
+    } else if (s === currentStageNum) {
+      node.classList.add("active");
+    }
+  });
 }
 
 function renderTimeline(messages, autoScroll) {
@@ -214,6 +250,10 @@ function renderTimeline(messages, autoScroll) {
       icon = "🛠️";
       roleClass = "avatar-remediator";
       badgeText = "Code Remediator";
+    } else if (msg.sender_role === "verifier") {
+      icon = "🔍";
+      roleClass = "avatar-verifier";
+      badgeText = "Independent QA Verifier";
     } else if (msg.sender_role === "human") {
       icon = "👤";
       roleClass = "avatar-human";
@@ -260,6 +300,28 @@ function renderTimeline(messages, autoScroll) {
   }
 }
 
+async function loadMistakes() {
+  try {
+    const res = await fetch("/api/mistakes");
+    const mistakes = await res.json();
+    const tbody = document.getElementById("mistakes-tbody");
+    tbody.innerHTML = "";
+
+    mistakes.forEach((m) => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td class="mistakes-id">${escapeHtml(m.id)}</td>
+        <td><b>${escapeHtml(m.title)}</b></td>
+        <td><code>${escapeHtml(m.anti_pattern)}</code></td>
+        <td>${escapeHtml(m.prevention_rule)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  } catch (e) {
+    console.error("Failed to load mistakes", e);
+  }
+}
+
 async function triggerAction(actionId) {
   if (!currentIncidentId) return;
 
@@ -272,6 +334,7 @@ async function triggerAction(actionId) {
     const updated = await res.json();
     loadIncidentDetail(updated.id, true);
     loadIncidents();
+    loadMistakes();
   } catch (e) {
     alert("Action failed: " + e.message);
   }

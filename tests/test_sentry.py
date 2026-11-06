@@ -4,12 +4,14 @@ from switch_sentry.models import (
     Incident,
     IncidentAlert,
     IncidentSeverity,
-    IncidentStatus,
+    IncidentStage,
 )
 from switch_sentry.sample_incidents import SAMPLE_INCIDENTS
 from switch_sentry.switch_bridge import SwitchBridge
 from switch_sentry.telemetry import TrustMonitor
+from switch_sentry.mistakes import MISTAKE_REGISTRY
 from switch_sentry.agents.remediator import CodeRemediator
+from switch_sentry.agents.verifier import QAVerifier
 from switch_sentry.agents.commander import IncidentCommander
 
 
@@ -33,63 +35,80 @@ def test_trust_telemetry_calculation():
     assert len(snapshot.audit_logs) == 1
 
 
-def test_code_remediator_diff_generation():
-    """Verifies that CodeRemediator crafts unified diffs and tests."""
+def test_remediator_and_verifier_pipeline():
+    """Verifies solution planning, patch synthesis, and independent QA verification."""
     alert = SAMPLE_INCIDENTS[0]
     monitor = TrustMonitor(incident_id=alert.id)
     remediator = CodeRemediator()
+    verifier = QAVerifier()
 
+    # 1. Solution plan
+    plan = remediator.formulate_plan(alert)
+    assert plan.approach is not None
+    assert alert.affected_file in plan.affected_files
+
+    # 2. Patch delivery
     patch, rationale = remediator.generate_remediation(alert, monitor)
-
     assert patch.file_path == alert.affected_file
     assert "--- a/" in patch.unified_diff
     assert "+++ b/" in patch.unified_diff
-    assert "PASSED" in patch.test_output
-    assert patch.risk_level == "LOW"
+
+    # 3. Independent QA verification
+    verdict, summary = verifier.evaluate_patch(alert, patch, monitor)
+    assert verdict.is_good_to_merge is True
+    assert "goodToMerge = TRUE" in summary
+    assert len(verdict.tests_executed) > 0
 
 
 @pytest.mark.asyncio
-async def test_incident_commander_workflow_and_approval():
-    """Verifies end-to-end multi-agent triage, approval, and RCA filing."""
+async def test_full_ziki_inspired_lifecycle_and_mistakes():
+    """Verifies end-to-end 6-stage lifecycle and mistake registry logging."""
     alert = SAMPLE_INCIDENTS[0]
     bridge = SwitchBridge()
     remediator = CodeRemediator()
-    commander = IncidentCommander(bridge=bridge, remediator=remediator)
+    verifier = QAVerifier()
+    commander = IncidentCommander(bridge=bridge, remediator=remediator, verifier=verifier)
     monitor = TrustMonitor(incident_id=alert.id)
 
     incident = Incident(
-        id="TEST-INC-99",
+        id="TEST-INC-ZIKI",
         alert=alert,
-        status=IncidentStatus.TRIGGERED,
+        stage=IncidentStage.TRIAGE,
         switch_room_id="test-incident-room",
     )
 
-    # 1. Trigger incident
+    initial_mistakes_count = len(MISTAKE_REGISTRY.get_all())
+
+    # 1. Run pipeline through Stage 5 (Human Gate)
     await commander.handle_new_incident(incident, monitor)
 
-    assert incident.status == IncidentStatus.AWAITING_APPROVAL
+    assert incident.stage == IncidentStage.AWAITING_APPROVAL
+    assert incident.plan is not None
     assert incident.patch is not None
-    assert len(incident.messages) == 3  # Triage, Remediator Patch, Approval Prompt
+    assert incident.verdict is not None
+    assert incident.verdict.is_good_to_merge is True
+    assert len(incident.messages) == 5  # Triage, Plan, Patch, QA Verdict, Human Gate Prompt
 
-    # Check Switch room messages
-    room_msgs = bridge.get_room_messages(incident.switch_room_id)
-    assert len(room_msgs) == 3
-
-    # 2. Human approval action
+    # 2. Human approval action -> Stage 6 (Resolved & Mistake Logged)
     await commander.handle_human_action(
         incident=incident,
         action="approve",
-        user_name="DevOps Lead",
+        user_name="Lead SRE",
         monitor=monitor,
     )
 
-    assert incident.status == IncidentStatus.RESOLVED
+    assert incident.stage == IncidentStage.RESOLVED
     assert incident.rca_document is not None
     assert "Incident Post-Mortem & RCA" in incident.rca_document
+    assert incident.mistake_entry is not None
 
-    # Verify RCA is registered as a Switch Room Document
+    # Verify Mistake Registry grew
+    assert len(MISTAKE_REGISTRY.get_all()) == initial_mistakes_count + 1
+
+    # Verify documents in Switch Room
     docs = bridge.get_room_documents(incident.switch_room_id)
     assert f"RCA-{incident.id}.md" in docs
+    assert "PROJECT_MISTAKE_REGISTRY.md" in docs
 
 
 if __name__ == "__main__":

@@ -8,18 +8,20 @@ import time
 from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse, StreamingResponse
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from switch_sentry.agents.commander import IncidentCommander
 from switch_sentry.agents.remediator import CodeRemediator
+from switch_sentry.agents.verifier import QAVerifier
+from switch_sentry.mistakes import MISTAKE_REGISTRY
 from switch_sentry.models import (
     ActionButton,
     Incident,
     IncidentAlert,
     IncidentSeverity,
-    IncidentStatus,
+    IncidentStage,
 )
 from switch_sentry.sample_incidents import SAMPLE_INCIDENTS
 from switch_sentry.switch_bridge import SwitchBridge
@@ -27,7 +29,7 @@ from switch_sentry.telemetry import TrustMonitor
 
 app = FastAPI(
     title="Switch Sentry",
-    description="Multi-Agent Incident Response Squad powered by Switch",
+    description="Multi-Agent Incident Response & Quality Governance Squad powered by Switch",
     version="1.0.0",
 )
 
@@ -39,15 +41,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Global in-memory storage for active demo sessions
 INCIDENTS: Dict[str, Incident] = {}
 MONITORS: Dict[str, TrustMonitor] = {}
 
 bridge = SwitchBridge()
 remediator = CodeRemediator()
-commander = IncidentCommander(bridge=bridge, remediator=remediator)
+verifier = QAVerifier()
+commander = IncidentCommander(bridge=bridge, remediator=remediator, verifier=verifier)
 
-# Mount static folder
+# Mount static files
 static_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "static")
 if os.path.exists(static_dir):
     app.mount("/static", StaticFiles(directory=static_dir), name="static")
@@ -94,15 +96,22 @@ async def get_presets():
     ]
 
 
+@app.get("/api/mistakes")
+async def get_mistakes():
+    """Returns the living Project Mistake Registry."""
+    return MISTAKE_REGISTRY.get_all()
+
+
 @app.get("/api/switch/status")
 async def get_switch_status():
-    """Reports status of the Switch Agent Bridge."""
+    """Reports status of the live Switch Agent Bridge."""
     live = await bridge.check_live_connection()
     return {
-        "switch_bridge_mode": "Live Switch Core" if live else "Embedded Standalone Hub",
+        "switch_bridge_mode": "Live Switch Core (Docker)" if live else "Embedded Standalone Hub",
         "live_connected": live,
         "endpoint": bridge.switch_url,
-        "supported_chat_platforms": ["Slack", "Discord", "Mattermost", "Teams"],
+        "registered_agents": list(bridge._registered_agents.keys()),
+        "mattermost_mirror": "http://localhost:8065" if live else None,
     }
 
 
@@ -127,14 +136,13 @@ async def get_incident(incident_id: str):
 
 @app.post("/api/incidents/trigger")
 async def trigger_incident(req: TriggerRequest):
-    """Triggers a new incident and initiates autonomous agent triage."""
+    """Triggers a new incident and initiates autonomous squad triage."""
     alert: Optional[IncidentAlert] = None
 
     if req.preset_id:
         for p in SAMPLE_INCIDENTS:
             if p.id == req.preset_id:
                 alert = p.copy(deep=True)
-                # Generate unique ID for this run
                 alert.id = f"{p.id}-{int(time.time() % 1000)}"
                 break
     
@@ -154,14 +162,14 @@ async def trigger_incident(req: TriggerRequest):
     incident = Incident(
         id=alert.id,
         alert=alert,
-        status=IncidentStatus.TRIGGERED,
+        stage=IncidentStage.TRIAGE,
         switch_room_id=f"incident-{alert.id.lower()}",
     )
 
     INCIDENTS[alert.id] = incident
     MONITORS[alert.id] = monitor
 
-    # Run the autonomous triage and remediator pipeline
+    # Run the autonomous triage, planning, patch, and independent QA pipeline
     await commander.handle_new_incident(incident, monitor)
     incident.telemetry = monitor.get_snapshot()
 

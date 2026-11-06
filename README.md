@@ -1,7 +1,8 @@
 # ⚡ Switch Sentry
-> **Autonomous Multi-Agent Incident Response & Code Remediation Squad for Engineering Teams**  
+> **Autonomous Multi-Agent Incident Response & Quality Governance Squad**  
 > *Built for the WeMakeDevs x DevTools Academy "Flip the Switch" Hackathon • Track: Best Business Workflow*  
-> *Powered by [SandboxAQ Switch](https://github.com/sandbox-quantum/switch) & the Switch Trust Framework*
+> *Powered by [SandboxAQ Switch](https://github.com/sandbox-quantum/switch) & the Switch Trust Framework*  
+> *Workflow Architecture inspired by the Ziki Autonomous SDLC*
 
 ---
 
@@ -9,11 +10,25 @@
 
 Today, AI coding assistants (Claude Code, Cursor, OpenCode) live isolated inside individual developer terminals. When a critical production incident strikes ($P0$ outage, payment gateway crash, database deadlock), engineers scramble across fragmented tools: Slack threads, monitoring dashboards, and local terminal sessions.
 
-**Switch Sentry** brings AI agents directly into the team's collaborative channel as first-class on-call responders:
-1. **`@incident-commander`**: Ingests production alerts (Sentry / Datadog / GitHub), triages severity, orchestrates the war room, tracks telemetry, and publishes post-mortems.
-2. **`@code-remediator`**: Pinpoints faulty source lines, synthesizes minimal reproduction unit tests, formulates clean unified git diffs, and verifies zero-regression safety.
-3. **Human-in-the-Loop Safety**: No patch is deployed without interactive human sign-off via chat buttons (`[Approve & Deploy]`, `[Request Alternative]`, `[Reject]`).
-4. **Switch Trust™ Telemetry**: Monitors token expenditure, latency, and model confidence scores in real time.
+**Switch Sentry** transforms siloed terminal agents into a disciplined, collaborative **Multi-Agent Incident Squad** inside your team chat channels (Mattermost, Slack, Discord).
+
+### 💡 Core Ideas (Inspired by Ziki's Autonomous SDLC)
+Instead of a single agent acting as a black box, Switch Sentry enforces a rigorous **6-stage quality lifecycle**:
+
+```mermaid
+flowchart LR
+    S1["1. Triage & Confirmation"] --> S2["2. Solution Plan"]
+    S2 --> S3["3. Remediation Delivery"]
+    S3 --> S4["4. Independent QA (goodToMerge)"]
+    S4 --> S5["5. Human Sign-Off Gate"]
+    S5 --> S6["6. Mistake Registry & RCA"]
+```
+
+1. **`@incident-commander` (Coordination & Triage)**: Confirms alert, checks existing anti-patterns in the Mistake Registry, coordinates squad handoffs, and enforces human approvals.
+2. **`@code-remediator` (Solver & Delivery)**: Formulates an explicit Solution Plan before touching code, then delivers a surgical, minimal unified diff patch.
+3. **`@qa-verifier` (Independent Peer Reviewer)**: Following Ziki's rule that *an independent agent must test delivered work*, the QA verifier tests the patch with zero bias and issues a formal `goodToMerge: TRUE/FALSE` verdict.
+4. **Human-in-the-Loop Sign-Off**: The lead engineer reviews the diff, test results, and QA verdict before clicking `[Approve Patch & Deploy]`.
+5. **Living Project Mistake Registry**: Upon resolution, the root-cause anti-pattern is logged into the project's living Mistake Registry (stored as a Switch Room Document `PROJECT_MISTAKE_REGISTRY.md`) so subsequent agent runs never repeat the same bug.
 
 ---
 
@@ -21,19 +36,22 @@ Today, AI coding assistants (Claude Code, Cursor, OpenCode) live isolated inside
 
 ```mermaid
 flowchart TD
-    A["🚨 Production Alert<br>(Sentry / Datadog / GitHub)"] --> B["🌐 Switch Sentry Gateway"]
-    B --> C["⚡ Switch Core Bridge<br>(sandbox-quantum/switch)"]
+    A["🚨 Production Alert<br>(Sentry / Datadog / GitHub)"] --> B["⚡ Switch Sentry Gateway"]
+    B --> C["⚡ Switch Core Bridge (Port 8000)<br>(sandbox-quantum/switch)"]
     
-    subgraph "Switch Room: #incident-war-room (Slack / Discord)"
-        C --> D["🤖 @incident-commander"]
-        D <-->|"Triage & Tasking"| E["🛠️ @code-remediator"]
-        D -->|"Action Prompts & Diffs"| F["👤 Lead Engineer (Human)"]
-        F -->|"Interactive Approval"| D
+    subgraph "Switch Room: #incident-war-room (Mattermost :8065 / Slack)"
+        C --> D["🚨 @incident-commander"]
+        D -->|"1. Plan Task"| E["🛠️ @code-remediator"]
+        E -->|"2. Diff Delivery"| F["🔍 @qa-verifier"]
+        F -->|"3. goodToMerge Verdict"| D
+        D -->|"4. Action Prompt & Diffs"| H["👤 Lead Engineer (Human)"]
+        H -->|"5. Interactive Sign-Off"| D
     end
 
-    subgraph "Switch Trust™ & Room Governance"
-        D --> G["📑 Room Documents<br>(RCA-PostMortem.md)"]
-        D --> H["🛡️ Switch Trust SDK<br>(Tokens, Cost, Safety Score)"]
+    subgraph "Switch Room Documents & Trust Governance"
+        D --> G["📚 PROJECT_MISTAKE_REGISTRY.md"]
+        D --> I["📑 RCA-PostMortem.md"]
+        D --> J["🛡️ Switch Trust™ Telemetry<br>(Tokens, Cost, Safety Score)"]
     end
 ```
 
@@ -41,7 +59,7 @@ flowchart TD
 
 ## 📂 Switch Template Specification
 
-Switch Sentry is defined as an official **Switch YAML Template** (`templates/switch-sentry.template.yaml`), enabling instant one-click deployment into any Switch Console workspace:
+Switch Sentry is defined as an official **Switch YAML Template** ([`templates/switch-sentry.template.yaml`](templates/switch-sentry.template.yaml)):
 
 ```yaml
 version: 1
@@ -54,52 +72,58 @@ params:
     default: [$first]
 agents:
   - name: "incident-commander"
-    addressing: anyone
+    provider: claude
     instructions: |
-      Triage production alerts, assign reproduction to @code-remediator,
-      enforce human approvals before deployment, and file post-mortems.
+      Triage production alerts, check Mistake Registry, assign planning,
+      require independent QA verification, and enforce human sign-off.
   - name: "code-remediator"
-    addressing: owner-agents
+    provider: codex
     instructions: |
-      Isolate root cause from stack trace, generate minimal regression tests,
-      and formulate surgical unified diffs.
+      Consult Mistake Registry, formulate explicit solution plan,
+      and craft minimal unified diff patch.
+  - name: "qa-verifier"
+    provider: opencode
+    instructions: |
+      Independently review patch diffs, execute regression test suite,
+      and issue formal goodToMerge verdict.
 room:
   name: "{incident_channel}"
-  agents: ["incident-commander", "code-remediator"]
+  agents: ["incident-commander", "code-remediator", "qa-verifier"]
 ```
 
 ---
 
-## 🚀 Quickstart (Run in 30 Seconds)
+## 🚀 Quickstart
 
 ### 1. Prerequisites
-- Python 3.10+
-- (Optional) Docker if connecting to live Switch Core instance
+* Python 3.10+
+* Docker Desktop (for the local Switch + Mattermost stack)
 
-### 2. Setup & Installation
-```bash
-# Clone and enter the repository
-cd switch-sentry
-
-# Install dependencies
-pip install -r requirements.txt
+### 2. Launch Local Switch Core Stack
+```powershell
+# Starts Switch Core (:8000), Mattermost (:8065), and Postgres (:55432)
+powershell -ExecutionPolicy Bypass -File infra/switch-up.ps1
 ```
 
-### 3. Launch the War Room
-```bash
+### 3. Launch the Switch Sentry War Room
+```powershell
+# Install requirements
+pip install -r requirements.txt
+
+# Start the War Room UI
 python run.py
 ```
-Open **[http://localhost:8080](http://localhost:8080)** in your browser.
+Open **[http://localhost:8080](http://localhost:8080)** in your browser!
 
-*Note: Switch Sentry features a dual-mode bridge. If a live Switch Core server (`http://localhost:8000`) is running, it connects automatically via HTTP/MCP. If running standalone, it activates an embedded in-memory room hub so judges and testers can run the full multi-agent simulation with zero Docker dependencies.*
+You can also open Mattermost at **[http://localhost:8065](http://localhost:8065)** (login `user` / password from `infra/switch.env`) to see real messages mirrored to the `Town Square` channel in real time!
 
 ---
 
-## 🧪 Running Automated Tests
+## 🧪 Automated Test Suite
 
-Run the full end-to-end test suite (triage, diff synthesis, human approval loop, and Trust Telemetry):
+Run the full end-to-end test suite:
 
-```bash
+```powershell
 python -m pytest tests/test_sentry.py -v
 ```
 
@@ -109,24 +133,16 @@ python -m pytest tests/test_sentry.py -v
 
 | Timestamp | Screen | Voiceover / Action |
 | :--- | :--- | :--- |
-| **0:00 – 0:25** | Slides / Intro | *"AI coding agents today are siloed on individual laptops. When production crashes at 2 AM, teams waste precious minutes jumping between Slack and terminal windows. Here is Switch Sentry."* |
-| **0:25 – 0:50** | Web UI / Slack | Click **`+ Simulate Incident`** $\rightarrow$ select **`INC-P0-CHECKOUT`**. Show `@incident-commander` instantly announcing triage in `#incident-war-room` and tasking `@code-remediator`. |
-| **0:50 – 1:20** | Tab 2: Code Diff | Switch to **Code Diff tab**. Show the generated unified diff fixing the payment gateway timeout, plus the verified unit test pass output. |
-| **1:20 – 1:45** | Interactive Approval | Click **`[✅ Approve Patch & Deploy]`** directly in the chat. Show status transitioning to **RESOLVED** and the auto-generated **RCA Document** in Room Documents. |
-| **1:45 – 2:00** | Sidebar / Trust HUD | Highlight **Switch Trust HUD** showing token budget, cost in \$USD, and audit logs. Conclude with how this turns solo agents into accountable team players. |
+| **0:00 – 0:25** | Intro / Problem | *"AI coding agents today operate in silos without accountability. When production breaks at 2 AM, teams need a coordinated squad that follows engineering rigor. This is Switch Sentry."* |
+| **0:25 – 0:50** | Trigger & Triage | Click **`+ Simulate Incident`** $\rightarrow$ select **`INC-P0-CHECKOUT`**. Show `@incident-commander` checking the Mistake Registry, declaring P0, and tasking `@code-remediator`. |
+| **0:50 – 1:15** | Plan & Remediation | Show the **Solution Plan** step, followed by the surgical patch diff and regression test output. |
+| **1:15 – 1:35** | Independent QA | Highlight `@qa-verifier` entering the thread to independently test the code and issue `goodToMerge: TRUE`. |
+| **1:35 – 1:50** | Human Sign-Off | Click **`[✅ Approve Patch & Deploy Hotfix]`**. Show status update to **RESOLVED** and new entry added to the **Living Mistake Registry tab**. |
+| **1:50 – 2:00** | Switch Trust & Mattermost | Show the live Mattermost chat (`localhost:8065`) and the **Switch Trust HUD** showing token budget, cost in \$USD, and 98.5% confidence score. |
 
 ---
 
 ## 🛡️ Switch Trust™ Integration
-
-Switch Sentry adheres to the `switch-trust-sdk` specification:
-* **Cost Governance:** Accurately calculates prompt and completion costs against real token rates.
-* **Safety Scoring:** Evaluates regression risks and deduces confidence if dangerous actions are attempted without approval.
+* **Cost Governance:** Real-time token tracking with cost attribution.
+* **Safety Scoring:** Evaluates regression risks and deduces confidence if dangerous actions are attempted without verification.
 * **Audit Trail:** Every reasoning step and tool call is timestamped and recorded in the incident record.
-
----
-
-## 👥 Hackathon Submission Info
-* **Team:** Flip the Switch Team
-* **Event:** WeMakeDevs & DevTools Academy Hackathon
-* **Powered by:** Switch AI (`sandbox-quantum/switch`)

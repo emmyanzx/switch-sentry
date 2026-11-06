@@ -1,5 +1,6 @@
-# Switch Sentry: Multi-Agent Incident Response & Code Remediation Squad
+# Switch Sentry: Autonomous Incident Response & Quality Governance Squad
 # Powered by Switch (sandbox-quantum/switch)
+# Inspired by Ziki's Autonomous SDLC & Peer Verification Lifecycle
 
 version: 1
 
@@ -12,12 +13,12 @@ params:
   bridge:
     type: bridge
     default: [$first]
-    description: The collaboration platform (Slack, Discord, Mattermost, Teams).
+    description: The collaboration platform (Mattermost, Slack, Discord, Teams).
   provider:
     type: provider
     default: [claude, codex, opencode]
     input: advanced
-    description: AI model provider powering the incident squad.
+    description: AI model provider powering the squad.
   location:
     type: location
     default: local
@@ -28,52 +29,58 @@ params:
     input: advanced
 
 agents:
-  # Agent 1: The Commander
+  # Agent 1: The Commander (Triage, Triage Gate, Human Sign-Off, Mistake Registry)
   - name: "incident-commander"
-    display_name: "Incident Commander (Switch Sentry)"
-    description: "Triage production alerts, coordinates war room, enforces human approvals, and publishes post-mortems."
+    display_name: "Incident Commander"
+    description: "Triages alerts, coordinates squad workflow, consults the Mistake Registry, and enforces human approvals."
     addressing: anyone
     provider: "{provider}"
     location: "{location}"
     directory: "{directory}"
     instructions: |
-      You are the Incident Commander for engineering operations.
-      When production alerts (Sentry, Datadog, GitHub) arrive in this room:
-      1. Immediate Triage: Assess severity (P0/P1/P2), restate the impact in one crisp line, and acknowledge the team.
-      2. Coordinate Remediator: Address @code-remediator with the exact stack trace, suspected module, and instructions to isolate a minimal repro.
-      3. Enforce Human-in-the-Loop Safety: Never apply changes or close incidents autonomously. Present the proposed patch with clear risk assessment, and ask human engineers for explicit approval.
-      4. Document: Once resolved, generate a comprehensive Root Cause Analysis (RCA) and post-mortem document into the room documents.
-      5. Telemetry: Keep track of reasoning steps, model latency, and token budget using the Switch Trust framework.
+      You are the Incident Commander. You guide production incidents through an autonomous 5-stage lifecycle:
+      1. Triage & Confirmation: Verify alert impact, check the Project Mistake Registry for known anti-patterns, and declare severity.
+      2. Plan & Remediate: Direct @code-remediator to formulate a solution plan and deliver a surgical patch.
+      3. Independent Peer Review: Require @qa-verifier to independently review the diff, run regression tests, and give a formal goodToMerge verdict.
+      4. Human Sign-Off Gate: Present verified fix and risk assessment to human engineers for explicit approval.
+      5. Mistake Logging: Once resolved, log the root-cause anti-pattern into the living Project Mistake Registry document so future agents avoid it.
 
-  # Agent 2: The Remediator
+  # Agent 2: The Remediator (Solver & Patch Delivery)
   - name: "code-remediator"
-    display_name: "Code Remediator (Switch Sentry)"
-    description: "Inspects codebase, reproduces bugs with minimal test cases, and crafts targeted git diffs."
+    display_name: "Code Remediator"
+    description: "Formulates solution plan, checks codebase against known mistakes, and delivers surgical unified diffs."
     addressing: owner-agents
     provider: "{provider}"
     location: "{location}"
     directory: "{directory}"
     instructions: |
-      You are the Code Remediator working under the direction of @incident-commander.
-      Your responsibility:
-      1. Analyze the stack trace and pinpoint the exact source file and faulty lines.
-      2. Formulate a minimal reproduction test case to verify the failure.
-      3. Craft the surgical fix with minimal regression risk (unified diff format).
-      4. Report back to @incident-commander with:
-         - Root cause analysis
-         - Proposed diff
-         - Verification test results
-         - Potential side-effects
-      Never hallucinate test runs; explain exactly what you tested and verified.
+      You are the Code Remediator.
+      1. Consult the Project Mistake Registry before modifying code.
+      2. Formulate a solution plan (approach, affected files, risk level).
+      3. Deliver a minimal, surgical unified diff patch with zero extraneous changes.
+      4. Hand the patch over to @qa-verifier for independent verification.
+
+  # Agent 3: The QA Verifier (Independent Peer Review & goodToMerge Verdict)
+  - name: "qa-verifier"
+    display_name: "QA Verifier"
+    description: "Independent peer reviewer that validates patches, executes regression tests, and issues goodToMerge verdicts."
+    addressing: owner-agents
+    provider: "{provider}"
+    location: "{location}"
+    directory: "{directory}"
+    instructions: |
+      You are the independent QA Verifier. You never write the patch yourself.
+      1. Review the diff proposed by @code-remediator with high skepticism.
+      2. Validate edge cases, timeouts, and boundary conditions.
+      3. Execute regression tests and issue a formal verdict: goodToMerge (true or false), along with a testing summary.
 
 room:
   name: "{incident_channel}"
-  description: "Live Incident War Room for humans and Switch Sentry AI squad"
+  description: "Live Incident War Room with autonomous peer-verified remediation"
   bridge: "{bridge}"
-  agents: ["incident-commander", "code-remediator"]
+  agents: ["incident-commander", "code-remediator", "qa-verifier"]
   users: ["{$creator}"]
 
 kickoff: |
-  🚨 @incident-commander and @code-remediator are now on duty in #{incident_channel}.
-  All production telemetry, exceptions, and CI/CD failures will be routed here.
-  Human engineers: Mention @incident-commander anytime to trigger manual investigation.
+  🚨 Switch Sentry Squad is on duty in #{incident_channel}.
+  Autonomous pipeline active: Triage ➔ Solution Plan ➔ Remediation ➔ Independent Review (goodToMerge) ➔ Human Sign-Off ➔ Mistake Registry.
