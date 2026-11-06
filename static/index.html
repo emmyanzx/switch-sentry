@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Switch Sentry | Multi-Agent Incident Response Squad</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Header Bar -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo-icon">⚡</div>
+      <div class="brand-text">
+        <h1>Switch Sentry</h1>
+        <span class="tagline">Multi-Agent Incident Squad powered by Switch</span>
+      </div>
+    </div>
+
+    <div class="topbar-meta">
+      <div class="bridge-status" id="bridge-status-pill">
+        <span class="pulse-dot"></span>
+        <span id="bridge-mode-text">Switch Bridge: Embedded Standalone</span>
+      </div>
+      <button class="btn btn-primary" id="btn-open-trigger-modal">
+        <span>+</span> Simulate Incident
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <div class="app-layout">
+    <!-- Sidebar: Incidents & Trust Telemetry -->
+    <aside class="sidebar">
+      <div class="sidebar-section">
+        <div class="section-header">
+          <h3>Active Incidents</h3>
+          <span class="counter-badge" id="incident-count">0</span>
+        </div>
+        <div class="incident-list" id="incident-list">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Switch Trust Telemetry HUD -->
+      <div class="sidebar-section telemetry-section">
+        <div class="section-header">
+          <h3>Switch Trust™ HUD</h3>
+          <span class="hud-badge">Observability</span>
+        </div>
+        <div class="telemetry-grid">
+          <div class="telemetry-card">
+            <span class="telemetry-label">Trust Score</span>
+            <span class="telemetry-value text-accent" id="tel-trust">98.5%</span>
+          </div>
+          <div class="telemetry-card">
+            <span class="telemetry-label">Tokens Used</span>
+            <span class="telemetry-value" id="tel-tokens">0</span>
+          </div>
+          <div class="telemetry-card">
+            <span class="telemetry-label">Squad Latency</span>
+            <span class="telemetry-value" id="tel-latency">0ms</span>
+          </div>
+          <div class="telemetry-card">
+            <span class="telemetry-label">Cost ($USD)</span>
+            <span class="telemetry-value" id="tel-cost">$0.0000</span>
+          </div>
+        </div>
+        <div class="audit-log-container">
+          <span class="audit-title">Audit Trail:</span>
+          <ul class="audit-log-list" id="tel-audit-list">
+            <li>Awaiting incident trigger...</li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Workspace -->
+    <main class="workspace" id="workspace">
+      <!-- Incident Header -->
+      <div class="incident-header" id="incident-header">
+        <div class="incident-title-row">
+          <span class="severity-pill" id="view-severity">P0</span>
+          <h2 id="view-title">Select or trigger an incident</h2>
+          <span class="status-pill" id="view-status">IDLE</span>
+        </div>
+        <div class="incident-metadata-row" id="view-metadata">
+          <span class="meta-item">Service: <b id="meta-service">-</b></span>
+          <span class="meta-item">Location: <code id="meta-file">-</code></span>
+          <span class="meta-item">Ref: <code id="meta-commit">-</code></span>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <div class="workspace-tabs">
+        <button class="tab-btn active" data-tab="tab-room">
+          💬 Switch Room Timeline
+        </button>
+        <button class="tab-btn" data-tab="tab-diff">
+          🛠️ Code Diff & Regression Test
+        </button>
+        <button class="tab-btn" data-tab="tab-rca">
+          📄 Post-Mortem (RCA Doc)
+        </button>
+      </div>
+
+      <!-- Tab 1: Switch Room Timeline -->
+      <div class="tab-pane active" id="tab-room">
+        <div class="room-container">
+          <div class="room-channel-bar">
+            <span class="room-icon">#</span>
+            <span class="room-name" id="room-channel-name">incident-war-room</span>
+            <span class="room-members">🤖 @incident-commander • 🤖 @code-remediator • 👤 @lead-engineer</span>
+          </div>
+          <div class="chat-timeline" id="chat-timeline">
+            <!-- Messages populated dynamically -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: Code Diff & Regression Test -->
+      <div class="tab-pane" id="tab-diff">
+        <div class="diff-container">
+          <div class="diff-header">
+            <h4>Targeted Code Remediation (Unified Diff)</h4>
+            <span class="risk-badge" id="diff-risk">Risk: LOW</span>
+          </div>
+          <pre class="diff-viewer" id="diff-content">// No patch generated yet.</pre>
+          
+          <div class="test-header">
+            <h4>Automated Regression Test Suite</h4>
+          </div>
+          <pre class="test-viewer" id="test-content">// No test runs executed yet.</pre>
+        </div>
+      </div>
+
+      <!-- Tab 3: Post-Mortem RCA Document -->
+      <div class="tab-pane" id="tab-rca">
+        <div class="rca-container">
+          <div class="rca-header">
+            <h4>Switch Room Document: Root Cause Analysis (RCA)</h4>
+            <span class="doc-badge">Official Record</span>
+          </div>
+          <div class="rca-content" id="rca-markdown">
+            <p class="placeholder-text">The RCA document is automatically drafted and signed when the human engineer approves the remediation patch.</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal: Trigger Demo Incident -->
+  <div class="modal-backdrop" id="trigger-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Simulate Production Incident</h3>
+        <button class="btn-close" id="btn-close-modal">✕</button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">Select a realistic production incident preset to evaluate Switch Sentry's autonomous multi-agent triage and code repair:</p>
+        <div class="presets-list" id="presets-list">
+          <!-- Populated from /api/presets -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

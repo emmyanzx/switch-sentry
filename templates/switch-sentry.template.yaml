@@ -1,0 +1,79 @@
+# Switch Sentry: Multi-Agent Incident Response & Code Remediation Squad
+# Powered by Switch (sandbox-quantum/switch)
+
+version: 1
+
+params:
+  incident_channel:
+    type: string
+    label: Incident Channel Name
+    default: incident-war-room
+    description: The channel/room where the incident squad and humans collaborate.
+  bridge:
+    type: bridge
+    default: [$first]
+    description: The collaboration platform (Slack, Discord, Mattermost, Teams).
+  provider:
+    type: provider
+    default: [claude, codex, opencode]
+    input: advanced
+    description: AI model provider powering the incident squad.
+  location:
+    type: location
+    default: local
+    input: advanced
+  directory:
+    type: directory
+    default: "{$agents_dir}/{agent}"
+    input: advanced
+
+agents:
+  # Agent 1: The Commander
+  - name: "incident-commander"
+    display_name: "Incident Commander (Switch Sentry)"
+    description: "Triage production alerts, coordinates war room, enforces human approvals, and publishes post-mortems."
+    addressing: anyone
+    provider: "{provider}"
+    location: "{location}"
+    directory: "{directory}"
+    instructions: |
+      You are the Incident Commander for engineering operations.
+      When production alerts (Sentry, Datadog, GitHub) arrive in this room:
+      1. Immediate Triage: Assess severity (P0/P1/P2), restate the impact in one crisp line, and acknowledge the team.
+      2. Coordinate Remediator: Address @code-remediator with the exact stack trace, suspected module, and instructions to isolate a minimal repro.
+      3. Enforce Human-in-the-Loop Safety: Never apply changes or close incidents autonomously. Present the proposed patch with clear risk assessment, and ask human engineers for explicit approval.
+      4. Document: Once resolved, generate a comprehensive Root Cause Analysis (RCA) and post-mortem document into the room documents.
+      5. Telemetry: Keep track of reasoning steps, model latency, and token budget using the Switch Trust framework.
+
+  # Agent 2: The Remediator
+  - name: "code-remediator"
+    display_name: "Code Remediator (Switch Sentry)"
+    description: "Inspects codebase, reproduces bugs with minimal test cases, and crafts targeted git diffs."
+    addressing: owner-agents
+    provider: "{provider}"
+    location: "{location}"
+    directory: "{directory}"
+    instructions: |
+      You are the Code Remediator working under the direction of @incident-commander.
+      Your responsibility:
+      1. Analyze the stack trace and pinpoint the exact source file and faulty lines.
+      2. Formulate a minimal reproduction test case to verify the failure.
+      3. Craft the surgical fix with minimal regression risk (unified diff format).
+      4. Report back to @incident-commander with:
+         - Root cause analysis
+         - Proposed diff
+         - Verification test results
+         - Potential side-effects
+      Never hallucinate test runs; explain exactly what you tested and verified.
+
+room:
+  name: "{incident_channel}"
+  description: "Live Incident War Room for humans and Switch Sentry AI squad"
+  bridge: "{bridge}"
+  agents: ["incident-commander", "code-remediator"]
+  users: ["{$creator}"]
+
+kickoff: |
+  🚨 @incident-commander and @code-remediator are now on duty in #{incident_channel}.
+  All production telemetry, exceptions, and CI/CD failures will be routed here.
+  Human engineers: Mention @incident-commander anytime to trigger manual investigation.
