@@ -6,13 +6,13 @@
 
 ---
 
-## 📌 Overview
+##  Overview
 
 Today, AI coding assistants (Claude Code, Cursor, OpenCode) live isolated inside individual developer terminals. When a critical production incident strikes ($P0$ outage, payment gateway crash, database deadlock), engineers scramble across fragmented tools: Slack threads, monitoring dashboards, and local terminal sessions.
 
 **Switch Sentry** transforms siloed terminal agents into a disciplined, collaborative **Multi-Agent Incident Squad** inside your team chat channels (Mattermost, Slack, Discord).
 
-### 💡 Core Ideas (Inspired by Ziki's Autonomous SDLC)
+###  Core Ideas
 Instead of a single agent acting as a black box, Switch Sentry enforces a rigorous **6-stage quality lifecycle**:
 
 ```mermaid
@@ -32,7 +32,7 @@ flowchart LR
 
 ---
 
-## 🏗️ Architecture
+##  Architecture
 
 ```mermaid
 flowchart TD
@@ -57,7 +57,7 @@ flowchart TD
 
 ---
 
-## 📂 Switch Template Specification
+##  Switch Template Specification
 
 Switch Sentry is defined as an official **Switch YAML Template** ([`templates/switch-sentry.template.yaml`](templates/switch-sentry.template.yaml)):
 
@@ -93,7 +93,7 @@ room:
 
 ---
 
-## 🚀 Quickstart
+##  Quickstart
 
 ### 1. Prerequisites
 * Python 3.10+
@@ -119,7 +119,7 @@ You can also open Mattermost at **[http://localhost:8065](http://localhost:8065)
 
 ---
 
-## 🧪 Automated Test Suite
+## Automated Test Suite
 
 Run the full end-to-end test suite:
 
@@ -132,7 +132,7 @@ python -m pytest tests/test_sentry.py -v
 
 ---
 
-## 🛡️ Switch Trust™ Integration
+## Switch Trust™ Integration
 * **Cost Governance:** Real-time token tracking with cost attribution.
 * **Safety Scoring:** Evaluates regression risks and deduces confidence if dangerous actions are attempted without verification.
 * **Audit Trail:** Every reasoning step and tool call is timestamped and recorded in the incident record.
