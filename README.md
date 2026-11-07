@@ -1,4 +1,4 @@
-# ⚡ Switch Sentry
+# Switch Sentry
 > **Autonomous Multi-Agent Incident Response & Quality Governance Squad**  
 > *Built for the WeMakeDevs x DevTools Academy "Flip the Switch" Hackathon • Track: Best Business Workflow*  
 > *Powered by [SandboxAQ Switch](https://github.com/sandbox-quantum/switch) & the Switch Trust Framework*  
