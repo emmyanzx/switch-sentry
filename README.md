@@ -129,16 +129,6 @@ python -m pytest tests/test_sentry.py -v
 
 ---
 
-## 🎬 2-Minute Demo Video Walkthrough Script (For Recording)
-
-| Timestamp | Screen | Voiceover / Action |
-| :--- | :--- | :--- |
-| **0:00 – 0:25** | Intro / Problem | *"AI coding agents today operate in silos without accountability. When production breaks at 2 AM, teams need a coordinated squad that follows engineering rigor. This is Switch Sentry."* |
-| **0:25 – 0:50** | Trigger & Triage | Click **`+ Simulate Incident`** $\rightarrow$ select **`INC-P0-CHECKOUT`**. Show `@incident-commander` checking the Mistake Registry, declaring P0, and tasking `@code-remediator`. |
-| **0:50 – 1:15** | Plan & Remediation | Show the **Solution Plan** step, followed by the surgical patch diff and regression test output. |
-| **1:15 – 1:35** | Independent QA | Highlight `@qa-verifier` entering the thread to independently test the code and issue `goodToMerge: TRUE`. |
-| **1:35 – 1:50** | Human Sign-Off | Click **`[✅ Approve Patch & Deploy Hotfix]`**. Show status update to **RESOLVED** and new entry added to the **Living Mistake Registry tab**. |
-| **1:50 – 2:00** | Switch Trust & Mattermost | Show the live Mattermost chat (`localhost:8065`) and the **Switch Trust HUD** showing token budget, cost in \$USD, and 98.5% confidence score. |
 
 ---
 
